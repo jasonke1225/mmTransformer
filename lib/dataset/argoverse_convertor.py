@@ -128,6 +128,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     from config.Config import Config
     cfg = Config.fromfile(args.config)
+    # preprocess_cfg equal to "preprocess_dataset" in ./config/demo.py
     preprocess_cfg = cfg.get('preprocess_dataset')
     processor = ArgoverseConvertor(preprocess_cfg)
     processor.process()
