@@ -36,6 +36,7 @@ def compute_feature_for_one_seq(
 
         norm_center np.ndarray: (2, )
     """
+    # traj_df :{'TIMESTAMP', 'TRACK_ID', 'OBJECT_TYPE', 'X', 'Y', CITY_NAME'}
     # normalize timestamps
     traj_df['TIMESTAMP'] -= np.min(traj_df['TIMESTAMP'].values)
     seq_ts = np.unique(traj_df['TIMESTAMP'].values)
