@@ -65,8 +65,10 @@ class ArgoverseConvertor(object):
 
                 afl_ = afl.get(path_name_ext)
                 path, name_ext = os.path.split(path_name_ext)
+                # ex: name, ext = 15840, .csv (by lin)
                 name, ext = os.path.splitext(name_ext)
-
+                
+                # get dataframe of one csv (by lin)
                 info_dict[name] = self.process_case(afl_.seq_df)
 
             out_path = os.path.join(
