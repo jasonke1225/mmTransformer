@@ -51,6 +51,7 @@ def compute_feature_for_one_seq(
     # => [object_type, remain_df.shape] is [AGENT, (50, 6)], [AV, (50, 6)], [OTHERS, (80, 6)] (by lin)
     for obj_type, remain_df in traj_df.groupby('OBJECT_TYPE'):
         # sorted already according to timestamp
+        # 'AGENT' is what we interested in to predicion (by lin)
         if obj_type == 'AGENT':
             agent_df = remain_df
             start_x, start_y = agent_df[['X', 'Y']].values[0]
