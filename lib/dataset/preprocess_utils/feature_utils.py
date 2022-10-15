@@ -47,6 +47,8 @@ def compute_feature_for_one_seq(
         None] * 7
 
     # agent traj & its start/end point
+    # traj_df.groupby('OBJECT_TYPE'), ex: traj_df (180, 6) (by lin)
+    # => [object_type, remain_df.shape] is [AGENT, (50, 6)], [AV, (50, 6)], [OTHERS, (80, 6)] (by lin)
     for obj_type, remain_df in traj_df.groupby('OBJECT_TYPE'):
         # sorted already according to timestamp
         if obj_type == 'AGENT':
