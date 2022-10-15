@@ -77,6 +77,7 @@ def compute_feature_for_one_seq(
         am, agent_df, obs_len, city_name, lane_radius, norm_center, mode=mode, query_bbox=query_bbox)
 
     # search nearby moving objects from the last observed point of agent
+    # row_dataformat {'TIMESTAMP': 0, 'TRACK_ID': 1, 'OBJECT_TYPE': 2, 'X': 3, 'Y': 4, 'CITY_NAME': 5} (by lin)
     obj_feature_ls = get_nearby_moving_obj_feature_ls(
         agent_df, traj_df, obs_len, seq_ts, obj_radius, norm_center, raw_dataformat)
 
