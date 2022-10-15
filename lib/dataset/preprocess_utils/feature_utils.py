@@ -57,12 +57,19 @@ def compute_feature_for_one_seq(
             start_x, start_y = agent_df[['X', 'Y']].values[0]
             agent_x_end, agent_y_end = agent_df[['X', 'Y']].values[-1]
             query_x, query_y = agent_df[['X', 'Y']].values[obs_len-1]
+            # norm_center is XY of the 20th frame(last observed timestamp) (by lin)
             norm_center = np.array([query_x, query_y])
             break
         else:
             raise ValueError(f"cannot find 'agent' object type")
 
     # get agent features
+    '''
+    by lin
+    agent_feature is [xys, ts, agent_df['TRACK_ID'].iloc[0], gt_xys]
+    xys, ts, gt_xys is all normalize to last observed timestamp point of agent
+    xys is 1~20 frame's XY, gt_xys is 21~50 frame's XY, ts is 0~19 frame's TIMESRAMP
+    '''
     agent_feature = get_agent_feature_ls(agent_df, obs_len, norm_center)
     hist_xy = agent_feature[0]
     hist_len = np.sum(np.sqrt(
