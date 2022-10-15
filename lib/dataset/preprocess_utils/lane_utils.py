@@ -14,6 +14,8 @@ def get_nearby_lane_feature_ls(am, agent_df, obs_len, city_name, lane_radius, no
     returns:
         list of list of lane a segment feature, formatted in [centerline, is_intersection, turn_direction, is_traffic_control, lane_id,
          predecessor_lanes, successor_lanes, adjacent_lanes]
+         
+         nearby_lane_ids actually is list of id  (by lin)
     '''
     query_x, query_y = agent_df[['X', 'Y']].values[obs_len-1]
     nearby_lane_ids = am.get_lane_ids_in_xy_bbox(
