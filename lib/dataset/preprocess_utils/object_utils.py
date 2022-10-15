@@ -51,7 +51,7 @@ def pad_track(
 # Important: We delete some invalid nearby agents according to our criterion!!! Refer to continue option
 def get_nearby_moving_obj_feature_ls(agent_df, traj_df, obs_len, seq_ts, obj_radius, norm_center, raw_dataformat, fut_len=30):
     """
-    args:
+    args: obs_len = 20 (by lin)
     returns: list of list, (track, timestamp, mask, track_id, gt_track, gt_mask)
     """
     obj_feature_ls = []
