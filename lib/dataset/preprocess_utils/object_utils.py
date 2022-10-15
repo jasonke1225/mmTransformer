@@ -60,7 +60,8 @@ def get_nearby_moving_obj_feature_ls(agent_df, traj_df, obs_len, seq_ts, obj_rad
     for track_id, remain_df in traj_df.groupby('TRACK_ID'):
         if remain_df['OBJECT_TYPE'].iloc[0] == 'AGENT':
             continue
-
+        
+        # hist_df 為用track_id分類好，且不是'AGENT'，並為前20幀所組成的dataframe (by lin)
         hist_df = remain_df[remain_df['TIMESTAMP'] <=
                             agent_df['TIMESTAMP'].values[obs_len-1]]
         if(len(hist_df) == 0):
