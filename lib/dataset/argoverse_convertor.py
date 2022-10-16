@@ -69,6 +69,8 @@ class ArgoverseConvertor(object):
                 name, ext = os.path.splitext(name_ext)
                 
                 # get dataframe of one csv (by lin)
+                # info_dict[name] = {['HISTORY', 'FUTURE', 'LANE_ID', 'NORM_CENTER', 'VALID_LEN', 'CITY_NAME', 'THETA', 'POS']} (by lin)
+                # 'HISTORY' & 'FUTURE'皆為1.5
                 info_dict[name] = self.process_case(afl_.seq_df)
 
             out_path = os.path.join(
