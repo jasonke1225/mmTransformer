@@ -57,6 +57,10 @@ if __name__ == "__main__":
                        miss_threshold=2.0)
     # =================================== INIT MODEL ===========================================================
     model_cfg = cfg.get('model')
+    #  {'type': 'stacked_transformer', 'history_num_frames': 20, 'future_num_frames': 30, (
+    #   'in_channels': 4, 'lane_channels': 7, 'out_channels': 60, 'K': 6, 'increasetime': 3, 
+    #   'queries': 6, 'num_guesses': 6, 'queries_dim': 64, 'enc_dim': 64, 'aux_task': False, 
+    #   'subgraph_width': 32, 'num_subgraph_layres': 2, 'lane_length': 10}
     stacked_transfomre = load_model_class(model_cfg['type'])
     model = mmTrans(stacked_transfomre, model_cfg).cuda()
     model_name = os.path.join(args.model_save_path,
