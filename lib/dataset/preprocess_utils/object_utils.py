@@ -31,6 +31,13 @@ def pad_track(
     end_idx = np.where(seq_timestamps == track_timestamps[-1])[0][0]
 
     # Edge padding in front and rear, i.e., repeat the first and last coordinates
+    # 只填充上下row， start_idx = 1, end_idx = 2, A = np.pad(a,((start_idx, end_idx), (0, 0)), "edge") (by lin)
+    # ex: a = [[0,1,2],                  A = [[0,1,2],
+    #          [3,4,5],          =>           [0,1,2],
+    #          [6,7,8]]                       [3,4,5],
+    #                                         [6,7,8],
+    #                                         [6,7,8],
+    #                                         [6,7,8]]
     # if self.PADDING_TYPE == "REPEAT"
     padded_track_array = np.pad(track_vals,
                                 ((start_idx, track_len - end_idx - 1),
