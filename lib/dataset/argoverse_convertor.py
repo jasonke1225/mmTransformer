@@ -105,6 +105,8 @@ class ArgoverseConvertor(object):
             )
 
         # pack as the output
+        # dic = {"HISTORY", "FUTURE", "LANE_ID", "NORM_CENTER", 
+        #        "VALID_LEN": np.array((len(all_agents_nd), len(lane_id))), "CITY_NAME": city_name} (by lin)
         dic = save_features(
             agent_feature, obj_feature_ls, nearby_lane_ids, norm_center, city_name
         )
