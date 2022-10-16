@@ -119,7 +119,8 @@ class ArgoverseConvertor(object):
         data = self.preprocess_case(seq_df)
         # vectorized
         vec_dic = self.vec_processor.process_case(data)
-
+        # vec_dic = {['HISTORY', 'FUTURE', 'LANE_ID', 'NORM_CENTER', 'VALID_LEN', 'CITY_NAME', 'THETA', 'POS']} (by lin)
+        
         return vec_dic
 
 
