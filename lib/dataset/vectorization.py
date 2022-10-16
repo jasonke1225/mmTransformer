@@ -66,6 +66,7 @@ class VectorizedCase(object):
         assert hist_traj.shape == (num_agent, 19, 4)
         assert pos.shape == (num_agent, 2)
 
+        # self.pad is false, so dont need to do these (by lin)
         if self.pad:
             # padding data
             hist_traj = np.pad(
