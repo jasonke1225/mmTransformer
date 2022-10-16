@@ -66,7 +66,7 @@ def get_nearby_moving_obj_feature_ls(agent_df, traj_df, obs_len, seq_ts, obj_rad
           row_data_format {'TIMESTAMP': 0, 'TRACK_ID': 1, 'OBJECT_TYPE': 2, 'X': 3, 'Y': 4, 'CITY_NAME': 5} (by lin)
           seq_ts = np.unique(traj_df['TIMESTAMP'].values) (by lin)
           
-    returns: obj_feature_ls, a list of list, (track, timestamp, mask, track_id, gt_track, gt_mask)
+    returns: obj_feature_ls, a list of list, (xys, timestamp, mask, track_id, gt_track, gt_mask)
     
     # obj_feature_ls 為一個csv中的資料，其track_id符合以下規定: (by lin)
     # 1. 不是'AGENT'
