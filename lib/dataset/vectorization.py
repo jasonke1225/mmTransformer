@@ -110,7 +110,8 @@ class VectorizedCase(object):
                 GT
                 LANE
             ]
-
+            data = {"HISTORY", "FUTURE", "LANE_ID", "NORM_CENTER",  
+                    "VALID_LEN": np.array((len(all_agents_nd), len(lane_id))), "CITY_NAME": city_name} (by lin)
             out:
             ["HIST", "FUTURE", "POS", "VALID_AGENT","VALID_AGENT","LANE","MAX_LEN","THETA", "NAME"]
 
