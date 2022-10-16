@@ -57,8 +57,9 @@ class VectorizedCase(object):
 
         v = features[:, 1:, :2] - features[:, :-1, :2]  # na, 19, 2
         ts = (features[:, 1:, 2] + features[:, :-1, 2])/2  # na, 19
-        mask = features[:, 1:, 3]*features[:, :-1, 3]  # 1,1 =>1; 1,0 =>0; 0,0=>0
-
+        mask = features[:, 1:, 3]*features[:, :-1, 3]  # 1,1 =>1; 1,0 =>0; 0,0=>0.
+        
+        # hist_traj變成0.5, 1.5, 2.5,...., 19.5幀的軌跡資訊 (by lin)
         hist_traj = np.concatenate(
             [v, ts.reshape(-1, 19, 1), mask.reshape(-1, 19, 1)], -1)
         pos = features[:, -1, :2]
