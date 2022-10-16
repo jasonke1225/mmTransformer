@@ -44,6 +44,8 @@ def pad_track(
                                     (0, 0)), "edge")
 
     mask = np.ones((end_idx+1-start_idx))
+    # let start_idx = 1, end_idx = 2, track_len = 20 (by lin)
+    # final mask = [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (by lin)
     mask = np.pad(mask, (start_idx, track_len - end_idx - 1), 'constant')
     if padded_track_array.shape[0] < track_len:
         # rare case, just ignore
