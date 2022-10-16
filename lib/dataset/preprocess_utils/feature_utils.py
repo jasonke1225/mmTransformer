@@ -112,8 +112,7 @@ def save_features(agent_feature, obj_feature_ls, nearby_lane_ids, norm_center, c
     assert agent_gt.shape[1] == 3
 
     # obj features
-    # input: xy,ts,mask
-    # gt: xy, mask
+    # input: xys,ts,mask, track_id, gt_track, gt_mask
     if(len(obj_feature_ls) > 0):
         for obj_feature in obj_feature_ls:
             obj_len = obj_feature[0].shape[0]
