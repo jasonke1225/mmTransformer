@@ -52,6 +52,7 @@ def pad_track(
         return None, None, False
 
     # Overwrite the timestamps in padded part
+    # padded_track_array可視為強行將所有track_id的資料都pad成有20幀和30幀的資料 (by lin) 
     for i in range(padded_track_array.shape[0]):
         padded_track_array[i, 0] = seq_timestamps[i]
     assert mask.shape[0] == padded_track_array.shape[0]
