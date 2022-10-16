@@ -50,6 +50,7 @@ class VectorizedCase(object):
         features = features[..., :4]
 
         if self.striaghten:
+            # features size become (number of agents * history frame num, 4) (by lin)
             features = features.reshape(-1, 4)
             features[:, :2] = transform_coord(features[:, :2], theta)
             features = features.reshape(num_agent, 20, 4)
