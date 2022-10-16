@@ -18,7 +18,7 @@ class VectorizedCase(object):
 
     def get_straighten_angle(self, features):
         '''
-            agent_features: [20,5]
+            agent_features: [20,4]
             -------------Calculate-Angle-------------------
             trajs which feed into func must satisfy following condition:
             1. long enough (l > 2m)
@@ -41,7 +41,7 @@ class VectorizedCase(object):
 
     def get_history_traj(self, features, theta):
         '''
-            features: trajectory features with size (number of agents, history frame num, 5)
+            features: trajectory features with size (number of agents, history frame num, 4)
             Notes: index 0 of axis 0 is the target agent.  
         '''
 
