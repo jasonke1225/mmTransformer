@@ -127,4 +127,6 @@ def get_nearby_moving_obj_feature_ls(agent_df, traj_df, obs_len, seq_ts, obj_rad
         assert gt_mask.shape[0] == fut_len
         obj_feature_ls.append(
             [xys, ts, mask, track_id, gt_xys, gt_mask])
+    
+    # obj_feature_ls 最後為一個csv中的track_id數
     return obj_feature_ls
