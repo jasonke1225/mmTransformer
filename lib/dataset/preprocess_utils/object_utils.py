@@ -66,7 +66,13 @@ def get_nearby_moving_obj_feature_ls(agent_df, traj_df, obs_len, seq_ts, obj_rad
           row_data_format {'TIMESTAMP': 0, 'TRACK_ID': 1, 'OBJECT_TYPE': 2, 'X': 3, 'Y': 4, 'CITY_NAME': 5} (by lin)
           seq_ts = np.unique(traj_df['TIMESTAMP'].values) (by lin)
           
-    returns: list of list, (track, timestamp, mask, track_id, gt_track, gt_mask)
+    returns: obj_feature_ls, a list of list, (track, timestamp, mask, track_id, gt_track, gt_mask)
+    
+    # obj_feature_ls 為一個csv中的資料，其track_id符合以下規定: (by lin)
+    # 1. 不是'AGENT'
+    # 2. 在'AGENT'第20幀前有出現過
+    # 3. 在'AGENT'第20幀有出現且與其距離在obj_radius(10)內
+    # 4. mask的總值大於3 (出現的幀數小於20幀才會去pad，pad的幀數對應的mask位置為0)
     """
     obj_feature_ls = []
     query_x, query_y = agent_df[['X', 'Y']].values[obs_len-1]
@@ -128,5 +134,4 @@ def get_nearby_moving_obj_feature_ls(agent_df, traj_df, obs_len, seq_ts, obj_rad
         obj_feature_ls.append(
             [xys, ts, mask, track_id, gt_xys, gt_mask])
     
-    # obj_feature_ls 最後為一個csv中的track_id數
     return obj_feature_ls
