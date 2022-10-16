@@ -13,7 +13,7 @@ def pad_track(
 ) -> np.ndarray:
     """Pad incomplete tracks.
     Args:
-        track_df (Dataframe): Dataframe for the track
+        track_df (Dataframe): Dataframe of the track id's car (by lin)
         seq_timestamps (numpy array): All timestamps in the sequence
         base: base frame id (0 for observed trajectory, 20 for future trajectory)
         track_len (int): Length of whole trajectory (observed + future)
