@@ -70,7 +70,12 @@ class ArgoverseConvertor(object):
                 
                 # get dataframe of one csv (by lin)
                 # info_dict[name] = {['HISTORY', 'FUTURE', 'LANE_ID', 'NORM_CENTER', 'VALID_LEN', 'CITY_NAME', 'THETA', 'POS']} (by lin)
-                # 'HISTORY' & 'FUTURE'皆為1.5, 1.5, 2.5,...., 19.5幀的軌跡資訊 (by lin)
+                # 'HISTORY' & 'FUTURE'皆為1.5, 1.5, 2.5,...., 19.5幀的各個track_id的軌跡資訊
+                # 為一個個csv中的資料，除了index 0 為 'AGENT'，其他track_id符合以下規定:
+                # 1. 不是'AGENT'
+                # 2. 在'AGENT'第20幀前有出現過
+                # 3. 在'AGENT'第20幀有出現且與其距離在obj_radius(10)內
+                # 4. mask的總值大於3 (出現的幀數小於20幀才會去pad，pad的幀數對應的mask位置為0)
                 # 'POS' 為所有車在第20幀以'AGENT'為中心的XY座標
                 info_dict[name] = self.process_case(afl_.seq_df)
 
