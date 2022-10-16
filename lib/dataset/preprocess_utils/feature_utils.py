@@ -144,8 +144,8 @@ def save_features(agent_feature, obj_feature_ls, nearby_lane_ids, norm_center, c
 
     # saving
     dic = {
-        "HISTORY": all_agents_nd.astype(np.float32),
-        "FUTURE": all_agents_gt.astype(np.float32),
+        "HISTORY": all_agents_nd.astype(np.float32), # (X,Y,ts,mask) (by lin)
+        "FUTURE": all_agents_gt.astype(np.float32), # (GT_X, GT_Y, GT_mask) (by lin)
         "LANE_ID": lane_id.astype(np.int32),
         "NORM_CENTER": norm_center.astype(np.float32),
         "VALID_LEN": np.array((len(all_agents_nd), len(lane_id))),
