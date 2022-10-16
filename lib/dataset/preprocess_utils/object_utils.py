@@ -26,6 +26,7 @@ def pad_track(
     seq_timestamps = seq_timestamps[base:base+track_len]
 
     # start and index of the track in the sequence
+    # 找每個track_id在全部時間(50個frame)中的start index和end index (by lin)
     start_idx = np.where(seq_timestamps == track_timestamps[0])[0][0]
     end_idx = np.where(seq_timestamps == track_timestamps[-1])[0][0]
 
