@@ -71,6 +71,7 @@ class ArgoverseConvertor(object):
                 # get dataframe of one csv (by lin)
                 # info_dict[name] = {['HISTORY', 'FUTURE', 'LANE_ID', 'NORM_CENTER', 'VALID_LEN', 'CITY_NAME', 'THETA', 'POS']} (by lin)
                 # 'HISTORY' & 'FUTURE'皆為1.5, 1.5, 2.5,...., 19.5幀的軌跡資訊 (by lin)
+                # 'POS' 為所有車在第20幀以'AGENT'為中心的XY座標
                 info_dict[name] = self.process_case(afl_.seq_df)
 
             out_path = os.path.join(
