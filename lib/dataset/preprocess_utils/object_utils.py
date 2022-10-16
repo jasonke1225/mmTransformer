@@ -82,6 +82,7 @@ def get_nearby_moving_obj_feature_ls(agent_df, traj_df, obs_len, seq_ts, obj_rad
             continue
         # pad hist
         xys, ts = None, None
+        # 如果目前track_id出現的幀數少於20，將資料pad成20幀的資料 (by lin)
         if len(hist_df) < obs_len:
             paded_nd, mask, flag = pad_track(
                 hist_df, seq_ts, 0, obs_len, raw_dataformat)
