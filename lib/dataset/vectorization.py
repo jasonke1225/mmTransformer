@@ -46,6 +46,7 @@ class VectorizedCase(object):
         '''
 
         num_agent = features.shape[0]
+        # features看起來沒有變 (by lin)
         features = features[..., :4]
 
         if self.striaghten:
