@@ -47,7 +47,9 @@ class ArgoverseConvertor(object):
     def process(self,):
 
         # preprocess the map
-        # 存成map.pkl (by lin)
+        # 存成map.pkl, 內容為 [dic, lane_id2idx]，並各依照城市分類(by lin)
+        # lane_id2idx為(city_num, lane_id_num, 1), 存每個lane_id是第幾個index
+        # dic shape為(city_num, lane_id_num, 10, 5)，每個lane_id 有 10個點，內容為 [X, Y, lane_info1, lane_info2, lane_info3]
         self.preprocess_map()
 
         # storage the case infomation
