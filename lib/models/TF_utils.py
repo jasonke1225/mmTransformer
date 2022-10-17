@@ -57,6 +57,7 @@ class EncoderLayer(nn.Module):
 
     def __init__(self, size, self_attn, feed_forward, dropout):
         super(EncoderLayer, self).__init__()
+        # self_attn => MultiHeadAttention(h=2, d_model=128, dropout=0) (by lin)
         self.self_attn = self_attn
         self.feed_forward = feed_forward
         self.sublayer = clones(SublayerConnection(size, dropout), 2)
@@ -66,6 +67,7 @@ class EncoderLayer(nn.Module):
         """
         Follow Figure 1 (left) for connections.
         """
+        # self.self_attn forword => (query, key, value, mask) (by lin)
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
 
