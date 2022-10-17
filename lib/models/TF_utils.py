@@ -68,6 +68,7 @@ class EncoderLayer(nn.Module):
         Follow Figure 1 (left) for connections.
         """
         # self.self_attn forword => (query, key, value, mask) (by lin)
+        # norm(x) -> MultiHeadAttention -> dropout -> +x (by lin)
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
         return self.sublayer[1](x, self.feed_forward)
 
