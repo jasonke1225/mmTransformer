@@ -43,6 +43,9 @@ if __name__ == "__main__":
 
     # ================================== INIT DATASET ==========================================================
     validation_cfg = cfg.get('val_dataset')
+    # val_dataset為將traj.pkl的資料與map.pkl做結合 (by lin)
+    # dict變成 ['NAME', 'MAX_LEN', 'HISTORY', 'FUTURE', 'LANE_ID', 'NORM_CENTER', 
+    #           'VALID_LEN', 'CITY_NAME', 'THETA', 'POS', 'LANE']
     val_dataset = ArgoverseDataset(validation_cfg)
     val_dataloader = DataLoader(val_dataset,
                                 shuffle=validation_cfg["shuffle"],
