@@ -136,6 +136,7 @@ class STF(nn.Module):
         lane_out = self.lane_dec(hist_out, lane_mem, lane_mask, None)
         
         # Fuse position information
+        # 這部分應該是FFN (by lin)
         dist = lane_out.view(*traj.shape[0:2], -1)
         dist = self.dist_emb(dist)
         
