@@ -20,6 +20,7 @@ class EncoderDecoder(nn.Module):
     def forward(self, src, tgt, src_mask, tgt_mask, query_pos=None):
         """
         Take in and process masked src and target sequences.
+        input : (traj, self.query_batches, None, None) (by lin)
         """
         output = self.encode(src, src_mask)
         return self.decode(output, src_mask, tgt, tgt_mask, query_pos)
