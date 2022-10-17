@@ -111,6 +111,7 @@ class STFDataset(Dataset):
         lane = lane_feature[:, :, :2]
 
         # Location normalization
+        # 將道路的座標系轉成以第20幀的'AGENT'為中心的坐標系 (by lin)
         lane = lane - center
         lane = transform_coord(lane, theta)
         lane_feature[:, :, :2] = lane
