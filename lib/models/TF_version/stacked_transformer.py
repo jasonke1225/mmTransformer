@@ -118,6 +118,7 @@ class STF(nn.Module):
             1, 1, *self.query_embed.weight.shape).repeat(*traj.shape[:2], 1, 1)
 
         # Trajectory transfomer
+        # linear embedding -> position_embedding -> encode -> decode (by lin)
         hist_out = self.hist_tf(traj, self.query_batches, None, None)
         pos = self.pos_emb(pos)
         hist_out = torch.cat([pos.unsqueeze(dim=2).repeat(
