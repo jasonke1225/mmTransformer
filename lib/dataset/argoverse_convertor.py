@@ -47,6 +47,7 @@ class ArgoverseConvertor(object):
     def process(self,):
 
         # preprocess the map
+        # 存成map.pkl (by lin)
         self.preprocess_map()
 
         # storage the case infomation
