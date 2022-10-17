@@ -23,11 +23,14 @@ class EncoderDecoder(nn.Module):
         input : (traj, self.query_batches, None, None) (by lin)
         """
         output = self.encode(src, src_mask)
+        # return self.decode(tgt, output, src_mask, tgt_mask, query_pos) (by lin)
         return self.decode(output, src_mask, tgt, tgt_mask, query_pos)
 
     def encode(self, src, src_mask):
         return self.encoder(self.src_embed(src), src_mask)
 
+    # def decode(self, tgt, enc_output, src_mask, tgt_mask, query_pos=None): (by lin)
+    #    return self.decoder(tgt, enc_output, src_mask, tgt_mask, query_pos) (
     def decode(self, memory, src_mask, tgt, tgt_mask, query_pos=None):
         return self.decoder(tgt, memory, src_mask, tgt_mask, query_pos)
 
