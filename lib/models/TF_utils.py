@@ -136,6 +136,7 @@ class DecoderLayer(nn.Module):
         q = k = self.with_pos_embed(x, query_pos)
         x = self.sublayer[0](x, lambda x: self.self_attn(q, k, x, tgt_mask))
         x = self.with_pos_embed(x, query_pos)
+        # decoder的q, encoder的k,v (by lin)
         x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask))
         return self.sublayer[2](x, self.feed_forward)
 
