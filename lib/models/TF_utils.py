@@ -130,6 +130,7 @@ class DecoderLayer(nn.Module):
     def forward(self, x, memory, src_mask, tgt_mask, query_pos=None):
         """
         Follow Figure 1 (right) for connections.
+        self_attn 和 src_attn 架構都一樣 (by lin)
         """
         m = memory
         q = k = self.with_pos_embed(x, query_pos)
