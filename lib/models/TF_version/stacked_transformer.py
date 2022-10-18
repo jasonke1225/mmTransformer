@@ -122,35 +122,38 @@ class STF(nn.Module):
         # Encode Layers : new_x = norm(x) -> MultiHeadAttention -> dropout -> +x 
         #                 out = norm(new_x) -> FeedForward -> dropout -> + new_x 
         # hist_out已分出K條proposal (by lin)
-        hist_out = self.hist_tf(traj, self.query_batches, None, None)
-        pos = self.pos_emb(pos)
+        hist_out = self.hist_tf(traj, self.query_batches, None, None) # ex: (32,28,6, 128)
+        pos = self.pos_emb(pos) # ex: (32,28,64)
         hist_out = torch.cat([pos.unsqueeze(dim=2).repeat(
-            1, 1, self.num_queries, 1), hist_out], dim=-1)
-        hist_out = self.fusion1(hist_out)
+            1, 1, self.num_queries, 1), hist_out], dim=-1)            # ex: (32,28,6,192)
+        hist_out = self.fusion1(hist_out)                             # ex: (32,28,6,128)
         
         # Lane encoder
-        lane_mem = self.lane_enc(self.lane_emb(lane_enc), lane_mask)
-        lane_mem = lane_mem.unsqueeze(1).repeat(1, social_num, 1, 1)
-        lane_mask = lane_mask.unsqueeze(1).repeat(1, social_num, 1, 1)
-        
+        # lane_enc, ex: (32,131,64)
+        # self.lane_emb(lane_enc), ex: (32,131,128)
+        lane_mem = self.lane_enc(self.lane_emb(lane_enc), lane_mask)     # ex: (32,131,128)
+        lane_mem = lane_mem.unsqueeze(1).repeat(1, social_num, 1, 1)     # ex: (32,28,131,128)
+        lane_mask = lane_mask.unsqueeze(1).repeat(1, social_num, 1, 1)   # ex: (32,28,1,131)
+         
         # Lane decoder
-        lane_out = self.lane_dec(hist_out, lane_mem, lane_mask, None)
+        lane_out = self.lane_dec(hist_out, lane_mem, lane_mask, None) # ex: (32,28,6,128)
         
         # Fuse position information
-        # 這部分應該是FFN (by lin)
-        dist = lane_out.view(*traj.shape[0:2], -1)
-        dist = self.dist_emb(dist)
+        # 會將K條軌跡的proposal匯總 (by lin)
+        dist = lane_out.view(*traj.shape[0:2], -1)  # ex: (32,28,768)
+        # 這部分應該是MLP (by lin)
+        dist = self.dist_emb(dist)                  # ex: (32,28,128)
         
         # Social layer
         # pos 為所有track_id的車以'AGENT'為中心的XY座標 (by lin)
-        social_inp = self.fusion2(torch.cat([pos, dist], -1))
-        social_mem = self.social_enc(social_inp, social_mask)
+        social_inp = self.fusion2(torch.cat([pos, dist], -1)) # ex: (32,28,128)
+        social_mem = self.social_enc(social_inp, social_mask) # ex: (32,28,128)
         social_out = social_mem.unsqueeze(
-            dim=2).repeat(1, 1, self.num_queries, 1)
-        out = torch.cat([social_out, lane_out], -1)
+            dim=2).repeat(1, 1, self.num_queries, 1)          # ex: (32,28,6,128)
+        out = torch.cat([social_out, lane_out], -1)           # ex: (32,28,6,256)
 
         # Prediction head
-        outputs_coord, outputs_class = self.prediction_header(out)
+        outputs_coord, outputs_class = self.prediction_header(out) # ex:(32,28,6,30,2), (32,28,6)
   
         return outputs_coord, outputs_class
  
