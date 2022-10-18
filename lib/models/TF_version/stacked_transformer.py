@@ -141,6 +141,7 @@ class STF(nn.Module):
         dist = self.dist_emb(dist)
         
         # Social layer
+        # pos 為所有track_id的車以'AGENT'為中心的XY座標 (by lin)
         social_inp = self.fusion2(torch.cat([pos, dist], -1))
         social_mem = self.social_enc(social_inp, social_mask)
         social_out = social_mem.unsqueeze(
