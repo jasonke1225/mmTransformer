@@ -121,6 +121,7 @@ class STF(nn.Module):
         # linear embedding -> position_embedding -> Encode Layers -> norm -> Decode Layers -> norm (under by lin)
         # Encode Layers : new_x = norm(x) -> MultiHeadAttention -> dropout -> +x 
         #                 out = norm(new_x) -> FeedForward -> dropout -> + new_x 
+        # hist_out已分出K條proposal (by lin)
         hist_out = self.hist_tf(traj, self.query_batches, None, None)
         pos = self.pos_emb(pos)
         hist_out = torch.cat([pos.unsqueeze(dim=2).repeat(
