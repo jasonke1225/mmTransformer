@@ -102,11 +102,11 @@ class STF(nn.Module):
     def forward(self, traj, pos, social_num, social_mask, lane_enc, lane_mask):
         '''
             Args:
-                traj: [batch size, max_agent_num, 19, 4]
-                pos: [batch size, max_agent_num, 2]
+                traj: [batch size, max_agent_num, 19, 4], ex: (32,28,19,4)
+                pos: [batch size, max_agent_num, 2], ex: (32,28,2)
                 social_num: float = max_agent_num
                 social_mask: [batch size, 1, max_agent_num]
-                lane_enc: [batch size, max_lane_num, 64]
+                lane_enc: [batch size, max_lane_num, 64], ex: (32,131,64)
                 lane_mask: [batch size, 1, max_lane_num]
 
             Returns:
@@ -128,8 +128,7 @@ class STF(nn.Module):
             1, 1, self.num_queries, 1), hist_out], dim=-1)            # ex: (32,28,6,192)
         hist_out = self.fusion1(hist_out)                             # ex: (32,28,6,128)
         
-        # Lane encoder
-        # lane_enc, ex: (32,131,64)
+        # Lane encoder 
         # self.lane_emb(lane_enc), ex: (32,131,128)
         lane_mem = self.lane_enc(self.lane_emb(lane_enc), lane_mask)     # ex: (32,131,128)
         lane_mem = lane_mem.unsqueeze(1).repeat(1, social_num, 1, 1)     # ex: (32,28,131,128)
