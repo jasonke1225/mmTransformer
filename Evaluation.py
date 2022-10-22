@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
             out = model(data)
             format_results(data, out)
-            # if result = format_results.results 
+            # if result = format_results.results (by lin)
             #    result = dict{'forecasted_trajectories', 'gt_trajectories', 'city_names', 'forecasted_probabilities'}
             #    result['forecasted_trajectories'][data_name] : (6,30,2)
             #    result['gt_trajectories'][data_name] : (30,2)
