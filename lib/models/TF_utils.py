@@ -133,6 +133,7 @@ class DecoderLayer(nn.Module):
         self_attn 和 src_attn 架構都一樣 (by lin)
         x是前一個transformer decoder的output
         memory是自身encoder的output
+        query_pos一直是None，需要自己initial
         """
         m = memory
         q = k = self.with_pos_embed(x, query_pos)
