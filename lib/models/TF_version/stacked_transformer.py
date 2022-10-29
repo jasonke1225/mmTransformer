@@ -114,7 +114,7 @@ class STF(nn.Module):
                 outputs_class: [batch size, max_agent_num, num_query]
         '''
 
-        self.query_batches = self.query_embed.weight.view(
+        self.query_batches = self.query_embed.weight.view(                     # (32,20,6,128)
             1, 1, *self.query_embed.weight.shape).repeat(*traj.shape[:2], 1, 1)
 
         # Trajectory transfomer
