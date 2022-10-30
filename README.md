@@ -80,6 +80,9 @@ Format of map information in ‘map.pkl’:
 
 
 ## Run the mmTransformer
+For training:
+
+    python train.py ./config/demo.py --model-name demo
 
 For testing:
 
