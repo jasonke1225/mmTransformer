@@ -17,13 +17,16 @@ def load_config_data(path: str) -> dict:
     return cfg
 
 
-def save_checkpoint(checkpoint_dir, model, optimizer, MR=1.0):
+def save_checkpoint(checkpoint_dir, model, optimizer, awl, train_loss, valid_loss, MR=1.0):
     # state_dict: a Python dictionary object that:
     # - for a model, maps each layer to its parameter tensor;
     # - for an optimizer, contains info about the optimizerâ€™s states and hyperparameters used.
     state = {
         'state_dict': model.state_dict(),
         'optimizer': optimizer.state_dict(),
+        'awl': awl.state_dict(),
+        'train_loss': train_loss,
+        'valid_loss': valid_loss,
         'BestMissRate': MR
     }
 
@@ -31,11 +34,13 @@ def save_checkpoint(checkpoint_dir, model, optimizer, MR=1.0):
     print('model saved to %s' % checkpoint_dir)
 
 
-def load_checkpoint(checkpoint_path, model, optimizer=None):
+def load_checkpoint(checkpoint_path, model, optimizer, awl):
     state = torch.load(checkpoint_path)
     model.load_state_dict(state['state_dict'])
+    optimizer.load_state_dict(state['optimizer'])
+    awl.load_state_dict(state['awl'])
     print('model loaded from %s' % checkpoint_path)
-    return model
+    return model, optimizer, awl
 
 
 def load_model_class(model_name):
