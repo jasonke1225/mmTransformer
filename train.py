@@ -61,7 +61,6 @@ class AutomaticWeightedLoss(torch.nn.Module):
 def train(model, dataloader, optimizer):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.train()
-    
 
     total_loss_score = 0
     for j, data in enumerate(tqdm(dataloader)):
@@ -240,11 +239,18 @@ if __name__ == "__main__":
     model_cfg = cfg.get('model')
     stacked_transfomre = load_model_class(model_cfg['type'])
     model = mmTrans(stacked_transfomre, model_cfg)
-    # find pt in directory
+
+    awl = AutomaticWeightedLoss(3)
+    lr_rate = 10 ** -3 # origin is 0.001
+    optimizer = torch.optim.AdamW([
+                {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
+                {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0}])
+
     dir_path = os.path.dirname(os.path.realpath(__file__))
     dir_path += "/ckpt"
     all_file_name = os.listdir(dir_path)
     num = 0
+    model = model.to(device)
     if(len(all_file_name)>0):
         for i in range(len(all_file_name)):
             tmp = all_file_name[i].split('.')
@@ -253,26 +259,20 @@ if __name__ == "__main__":
                 num = int(tmp[1])
 
         model_name =  dir_path + "/model_"+str(num)+".pt"
-        model = load_checkpoint(model_name, model)
-
-    model = model.to(device)
-    awl = AutomaticWeightedLoss(3)
-    lr_rate = 10 ** -3 # origin is 0.001
-    optimizer = torch.optim.AdamW([
-                {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
-                {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0}])
-    optimizer.zero_grad() #set_to_none=True
+        model, optimizer, awl = load_checkpoint(model_name, model, optimizer, awl)
+    
+    optimizer.zero_grad(set_to_none=True) #set_to_none=True
     epochs = 100
     min_loss = 100
     min_index = 0
-    for i in range(epochs):
+    for i in range(epochs):          
         train_loss = train(model, train_dataloader, optimizer)
         val_loss = val(model, val_dataloader, optimizer)
         print('[epoch %d] train loss: %.6f' %(i + 1, train_loss))
         print('[epoch %d] val loss: %.6f' %(i + 1, val_loss))
         if i % 5 == 4:
             save_checkpoint_dir = dir_path + "/model_"+ str(i+num+1)+".pt"
-            save_checkpoint(save_checkpoint_dir, model, optimizer)
+            save_checkpoint(save_checkpoint_dir, model, optimizer, awl, train_loss, val_loss)
 
         if(train_loss<min_loss):
             min_loss = train_loss
@@ -280,7 +280,9 @@ if __name__ == "__main__":
 
         if (i - min_index > 9):
             lr_rate *= 0.1
-            optimizer = torch.optim.AdamW(model.parameters(), lr=lr_rate, weight_decay=0.0001)
+            optimizer = torch.optim.AdamW([
+                {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
+                {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0}])
             print("lr_rate * 0.1 = ",lr_rate)
 
     print('Train Process Finished!!')
