@@ -5,6 +5,7 @@ import time
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from functools import partial
@@ -22,6 +23,7 @@ from lib.utils.utilities import load_checkpoint, load_model_class, save_checkpoi
 import gc
 import warnings
 import math
+from lib.dataset.utils import transform_coord
 
 def parse_args():
 
@@ -58,11 +60,70 @@ class AutomaticWeightedLoss(torch.nn.Module):
             # +1避免了log 0的问题  log sigma部分对于整体loss的影响不大
         return loss_sum
 
-def train(model, dataloader, optimizer):
+def calculate_loss(min_fde_trj, gt_trj, C):
+    '''
+    vanilla training strategy: only using the proposal with the minimum final displacement error
+    vanilla training strategy dont need confidence score
+    '''
+    # regression loss
+    crit = torch.nn.HuberLoss().to(device)
+    regression_loss = crit(min_fde_trj, gt_trj)
+
+    # confidence loss
+    # T_y = 1
+    # lamda_s = 1
+    # confidence_loss = torch.nn.functional.kl_div(T_y.softmax(dim=-1).log(), lamda_s.softmax(dim=-1)).to(device)
+
+    # classification loss
+    label = torch.ones(gt_trj.shape[0]).to(device)
+    P = C # P is the sum of pred proposal in GT region，而沒用RTS時則相當於minFDE的pred proposal's sum
+    indicator = 1 # 因為都是minFDE的pred proposal，可以看成是預測軌跡一定跟GT區域一樣，所以indicator一定是1
+    classification_loss = -1 * torch.log(P)
+    classification_loss = classification_loss.mean() # batch size內要取平均
+
+    # loss_sum = awl(regression_loss, confidence_loss, classification_loss)
+    loss_sum = awl(regression_loss, classification_loss)
+    return loss_sum
+
+def transform_coord_tensor(coords, angle):
+    x = coords[..., 0]
+    y = coords[..., 1]
+    x_transform = torch.cos(angle)*x-torch.sin(angle)*y
+    y_transform = torch.cos(angle)*y+torch.sin(angle)*x
+    output_coords = torch.stack((x_transform, y_transform), axis=-1)
+
+    return output_coords
+
+def renormalized(out_trj, data):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    names = data['NAME'] # name is file name
+    togloble = data['NORM_CENTER']
+    theta = torch.Tensor(data['THETA'])
+    city_name = data['CITY_NAME']
+    gt_trj = torch.tensor([]).to(device)
+    pred_trj = torch.tensor([]).to(device)
+    for i, name in enumerate(names):
+        # Renormalized the predicted traj
+        pred = transform_coord_tensor(out_trj[i], -theta[i])
+        pred = pred + torch.tensor(togloble[i]).to(device)
+        pred = pred.unsqueeze(0)
+        pred_trj = torch.cat((pred_trj, pred), 0)
+
+        gt = data['FUTURE'][i][0,:,:2].to(device)
+        gt = gt.cumsum(axis=-2)
+        gt = transform_coord_tensor(gt, -theta[i])
+        gt = gt + torch.tensor(togloble[i]).to(device)
+        gt = gt.unsqueeze(0)
+        gt_trj = torch.cat((gt_trj, gt), 0)
+    
+    return pred_trj, gt_trj
+
+def train(model, dataloader, optimizer, epoch):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.train()
 
     total_loss_score = 0
+    min_fde = 0
     for j, data in enumerate(tqdm(dataloader)):
         for key in data.keys():
             if isinstance(data[key], torch.Tensor):
@@ -70,77 +131,58 @@ def train(model, dataloader, optimizer):
                     data[key] = data[key].to(device)
 
         out = model(data)
-        gt = data['FUTURE']
-        gt_trj = torch.tensor([])
-        for i in range(len(gt)):
-            tmp_trj = gt[i][0,:,:2].unsqueeze(0)
-            gt_trj = torch.cat((gt_trj, tmp_trj), 0)
 
-        gt_trj = gt_trj.to(device) #取每個batch的target agent的GT未來軌跡 (batch num, 30, 2)
         out_score = out[1][:,0]
         out_trj = out[0][:,0]
-        pred_trj = out_trj.permute(1,0,2,3).to(device) #取target agent的未來軌跡，並轉成(6,batch num, 30, 2)
+        '''
+        renormalized
+        note: renormalized, fde算法有檢查過，是對的
+        '''
+        pred_trj, gt_trj = renormalized(out_trj, data)
+        pred_trj = pred_trj.permute(1,0,2,3).to(device) #取target agent的未來軌跡，並轉成(6,batch num, 30, 2)
 
-        pdist = torch.nn.PairwiseDistance(p=2) # L2 distance
-        fde = pdist(pred_trj[:,:,-1,:], gt_trj[:,-1,:]) # 計算 L2 distance of 6個pred_trj和gt_trj的end point(找FDE), (6, batch_num)
-        fde = fde.permute(1,0) # (batch_num, 6)
+        fde = torch.sqrt((pred_trj[:,:,-1,0] - gt_trj[:,-1,0]) ** 2 + 
+                    (pred_trj[:,:,-1,1] - gt_trj[:,-1,1]) ** 2)
+        fde = fde.permute(1,0) # (batch_num, 6) 
         D_s = torch.min(fde, dim=1)[0] # L2 of min_fde_endpoint and GT endpoint
+        min_current_fde = torch.mean(D_s)
+        min_fde += min_current_fde.item()
+
         min_fde_index = torch.argmin(fde, dim=1)
         min_fde_trj = torch.tensor([]).to(device)
         C = torch.tensor([]).to(device) # min_fde_score (W_y)
         
+        pred_trj = pred_trj.permute(1,0,2,3).to(device) #轉回(batch num, 6, 30, 2)
+
         for i in range(out_trj.shape[0]):
-            tmp_trj = out_trj[i, min_fde_index[i].item()].unsqueeze(0).to(device)
+            tmp_trj = pred_trj[i, min_fde_index[i].item()].unsqueeze(0).to(device)
             min_fde_trj = torch.cat((min_fde_trj, tmp_trj), 0).to(device)
-            tmp_score = out_score[i][min_fde_index[i].item()].unsqueeze(0)
+            tmp_score = out_score[i][min_fde_index[i].item()].unsqueeze(0) # sum of out_score[i] is 1
             C = torch.cat((C, tmp_score),0)
-        
-        # regression loss
-        crit = torch.nn.HuberLoss().to(device)
-        regression_loss = crit(min_fde_trj, gt_trj)
-
-        # confidence loss
-        C_exp = torch.exp(C)
-        T_y = C_exp / torch.sum(C_exp)
-        D_s_exp = torch.exp(-1*D_s)
-        lamda_s = D_s_exp / torch.sum(D_s_exp)
-        confidence_loss = torch.nn.functional.kl_div(T_y.softmax(dim=-1).log(), lamda_s.softmax(dim=-1)).to(device)
-
-        # classification loss
-        P = C # P is the sum of pred proposal in GT region，而沒用RTS時則相當於minFDE的pred proposal's sum
-        indicator = 1 # 因為都是minFDE的pred proposal，可以看成是預測軌跡一定跟GT區域一樣，所以indicator一定是1
-        sum_P_log = torch.log(P).sum()
-        classification_loss = -1 * sum_P_log
 
         # weight losses
-        loss_sum = awl(regression_loss, confidence_loss, classification_loss)
+        loss_sum = calculate_loss(min_fde_trj, gt_trj, C)
+        optimizer.zero_grad(set_to_none=True)
         loss_sum.backward()
         total_loss_score += float(loss_sum.item())
 
-        #if(j%2==0 or j==(len(dataloader)-1)):
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.1) # gradient max norm is 0.1
         optimizer.step()
-        optimizer.zero_grad(set_to_none=True)
-
-        # if(j%50==0 or j==(len(dataloader)-1)):
-        #     del out
-        #     del gt_trj
-        #     del pred_trj
-        #     del loss_score
-        #     gc.collect()
-        #     torch.cuda.empty_cache()
 
     total_loss_score /= len(dataloader)
+    min_fde /= len(dataloader)
+    
+    return total_loss_score, min_fde
 
-    return total_loss_score
-
-def val(model, dataloader, optimizer):
+def val(model, dataloader, optimizer, epoch):
     """
     nearly same as train, except backward and opt
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
+
     total_loss_score = 0
+    min_fde = 0
     with torch.no_grad():
         for j, data in enumerate(tqdm(dataloader)):
             for key in data.keys():
@@ -149,55 +191,41 @@ def val(model, dataloader, optimizer):
                         data[key] = data[key].to(device)
 
             out = model(data)
-            gt = data['FUTURE']
-            gt_trj = torch.tensor([])
-            for i in range(len(gt)):
-                tmp_trj = gt[i][0,:,:2].unsqueeze(0)
-                gt_trj = torch.cat((gt_trj, tmp_trj), 0)
 
-            gt_trj = gt_trj.to(device)
             out_score = out[1][:,0]
             out_trj = out[0][:,0]
-            pred_trj = out_trj.permute(1,0,2,3).to(device)
+            '''
+            renormalized
+            '''
+            pred_trj, gt_trj = renormalized(out_trj, data)
 
-            pdist = torch.nn.PairwiseDistance(p=2)
-            fde = pdist(pred_trj[:,:,-1,:], gt_trj[:,-1,:])
-            fde = fde.permute(1,0)
-            D_s = torch.min(fde, dim=1)[0]
+            pred_trj = pred_trj.permute(1,0,2,3).to(device) #取target agent的未來軌跡，並轉成(6,batch num, 30, 2)
+            fde = torch.sqrt((pred_trj[:,:,-1,0] - gt_trj[:,-1,0]) ** 2 + 
+                        (pred_trj[:,:,-1,1] - gt_trj[:,-1,1]) ** 2)
+            fde = fde.permute(1,0) # (batch_num, 6) 
+            D_s = torch.min(fde, dim=1)[0] # L2 of min_fde_endpoint and GT endpoint
+            min_current_fde = torch.mean(D_s)
+            min_fde += min_current_fde.item()
+
             min_fde_index = torch.argmin(fde, dim=1)
             min_fde_trj = torch.tensor([]).to(device)
-            C = torch.tensor([]).to(device)
+            C = torch.tensor([]).to(device) # min_fde_score (W_y)
             
+            pred_trj = pred_trj.permute(1,0,2,3).to(device) #轉回(batch num, 6, 30, 2)
             for i in range(out_trj.shape[0]):
-                tmp_trj = out_trj[i, min_fde_index[i].item()].unsqueeze(0).to(device)
+                tmp_trj = pred_trj[i, min_fde_index[i].item()].unsqueeze(0).to(device)
                 min_fde_trj = torch.cat((min_fde_trj, tmp_trj), 0).to(device)
                 tmp_score = out_score[i][min_fde_index[i].item()].unsqueeze(0)
                 C = torch.cat((C, tmp_score),0)
-            
-            # regression loss
-            crit = torch.nn.HuberLoss().to(device)
-            regression_loss = crit(min_fde_trj, gt_trj)
-
-            # confidence loss
-            C_exp = torch.exp(C)
-            T_y = C_exp / torch.sum(C_exp)
-            D_s_exp = torch.exp(-1*D_s)
-            lamda_s = D_s_exp / torch.sum(D_s_exp)
-            confidence_loss = torch.nn.functional.kl_div(T_y.softmax(dim=-1).log(), lamda_s.softmax(dim=-1)).to(device)
-
-            # classification loss
-            P = C
-            indicator = 1
-            sum_P_log = torch.log(P).sum()
-            classification_loss = -1 * sum_P_log
 
             # weight losses
-            loss_sum = awl(regression_loss, confidence_loss, classification_loss)
+            loss_sum = calculate_loss(min_fde_trj, gt_trj, C)
             total_loss_score += float(loss_sum.item())
 
         total_loss_score /= len(dataloader)
+        min_fde /= len(dataloader)
 
-    return total_loss_score
+    return total_loss_score, min_fde
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
@@ -208,8 +236,6 @@ if __name__ == "__main__":
     gpu_num = torch.cuda.device_count()
     print("gpu number:{}".format(gpu_num))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
-
     args = parse_args()
     cfg = Config.fromfile(args.config)
 
@@ -229,22 +255,17 @@ if __name__ == "__main__":
                                 batch_size=validation_cfg["batch_size"],
                                 num_workers=validation_cfg["workers_per_gpu"],
                                 collate_fn=collate_single_cpu)
-    # =================================== Metric Initial =======================================================
-    format_results = FormatData()
-    # evaluate = partial(compute_forecasting_metrics,
-    #                    max_n_guesses=6,
-    #                    horizon=30,
-    #                    miss_threshold=2.0)
+                                
     # =================================== INIT MODEL ===========================================================
     model_cfg = cfg.get('model')
     stacked_transfomre = load_model_class(model_cfg['type'])
     model = mmTrans(stacked_transfomre, model_cfg)
 
-    awl = AutomaticWeightedLoss(3)
+    awl = AutomaticWeightedLoss(2)
     lr_rate = 10 ** -3 # origin is 0.001
     optimizer = torch.optim.AdamW([
                 {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
-                {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0}])
+                {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0.0001}])
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
     dir_path += "/ckpt"
@@ -266,23 +287,12 @@ if __name__ == "__main__":
     min_loss = 100
     min_index = 0
     for i in range(epochs):          
-        train_loss = train(model, train_dataloader, optimizer)
-        val_loss = val(model, val_dataloader, optimizer)
-        print('[epoch %d] train loss: %.6f' %(i + 1, train_loss))
-        print('[epoch %d] val loss: %.6f' %(i + 1, val_loss))
+        train_loss, train_min_fde = train(model, train_dataloader, optimizer, i)
+        val_loss, val_min_fde = val(model, val_dataloader, optimizer, i)
+        print('[epoch %d] train loss: %.6f' %(i + 1, train_loss), "min_fde: %.6f" % train_min_fde)
+        print('[epoch %d] val loss: %.6f' %(i + 1, val_loss), "min_fde: %.6f" % val_min_fde)
         if i % 5 == 4:
             save_checkpoint_dir = dir_path + "/model_"+ str(i+num+1)+".pt"
             save_checkpoint(save_checkpoint_dir, model, optimizer, awl, train_loss, val_loss)
-
-        if(train_loss<min_loss):
-            min_loss = train_loss
-            min_index = i
-
-        if (i - min_index > 9):
-            lr_rate *= 0.1
-            optimizer = torch.optim.AdamW([
-                {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
-                {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0}])
-            print("lr_rate * 0.1 = ",lr_rate)
 
     print('Train Process Finished!!')
