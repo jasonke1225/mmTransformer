@@ -26,6 +26,7 @@ class STFDataset(Dataset):
         self.processed_maps_path = cfg['processed_maps_path']
 
         self.traj_processor = ArgoverseConvertor(cfg['traj_processor_cfg'])
+        # self.traj_processor.process()
 
         # Load lane data
         with open(self.processed_maps_path, 'rb') as f:

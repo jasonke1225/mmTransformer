@@ -29,8 +29,8 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description='Evaluate the mmTransformer')
     parser.add_argument('config', help='config file path')
-    parser.add_argument('--model-name', type=str, default='demo')
-    parser.add_argument('--model-save-path', type=str, default='./models/')
+    # parser.add_argument('--model-name', type=str, default='demo')
+    # parser.add_argument('--model-save-path', type=str, default='./models/')
 
     args = parser.parse_args()
     return args
@@ -259,7 +259,10 @@ if __name__ == "__main__":
     # =================================== INIT MODEL ===========================================================
     model_cfg = cfg.get('model')
     stacked_transfomre = load_model_class(model_cfg['type'])
+    print(model_cfg)
     model = mmTrans(stacked_transfomre, model_cfg)
+
+    print()
 
     awl = AutomaticWeightedLoss(2)
     lr_rate = 10 ** -3 # origin is 0.001

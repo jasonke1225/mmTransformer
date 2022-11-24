@@ -156,13 +156,12 @@ if __name__ == "__main__":
                 num = int(tmp[1])
 
         state_name =  dir_path + "/model_"+str(num)+".pt"
-
     state = torch.load(state_name)
     model.load_state_dict(state['state_dict'])
     # awl_state = torch.load(state_name)
     # awl = AutomaticWeightedLoss(2)
     # awl.load_state_dict(state['awl'])
-    print('Successfully Loaded model: {}'.format(model_name))
+    print('Successfully Loaded model: {}'.format(state_name))
     print('Finished Initialization in {:.3f}s!!!'.format(
         time.time()-start_time))
     # ==================================== EVALUATION LOOP =====================================================
