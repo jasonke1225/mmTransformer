@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import torch
 from sklearn.linear_model import LinearRegression
 
 
@@ -42,12 +43,19 @@ def get_heading_angle(traj: np.ndarray):
 
 
 def transform_coord(coords, angle):
-    x = coords[..., 0]
-    y = coords[..., 1]
-    x_transform = np.cos(angle)*x-np.sin(angle)*y
-    y_transform = np.cos(angle)*y+np.sin(angle)*x
-    output_coords = np.stack((x_transform, y_transform), axis=-1)
-    
+    output_coords = None
+    if isinstance(coords, torch.Tensor) and isinstance(angle, torch.Tensor) :
+        x = coords[..., 0   ]
+        y = coords[..., 1]
+        x_transform = torch.cos(angle)*x-torch.sin(angle)*y
+        y_transform = torch.cos(angle)*y+torch.sin(angle)*x
+        output_coords = torch.stack((x_transform, y_transform), axis=-1)
+    else:
+        x = coords[..., 0   ]
+        y = coords[..., 1]
+        x_transform = np.cos(angle)*x-np.sin(angle)*y
+        y_transform = np.cos(angle)*y+np.sin(angle)*x
+        output_coords = np.stack((x_transform, y_transform), axis=-1)
     return output_coords
 
 

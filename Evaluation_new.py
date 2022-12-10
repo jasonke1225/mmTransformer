@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     # train by my self's model name
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path += "/ckpt"
+    dir_path += "/ckpt_128_4worker"
     all_file_name = os.listdir(dir_path)
     num = 0
     if(len(all_file_name)>0):

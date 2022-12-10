@@ -14,6 +14,7 @@ from config.Config import Config
 # ============= Dataset =====================
 from lib.dataset.collate import collate_single_cpu
 from lib.dataset.dataset_for_argoverse import STFDataset as ArgoverseDataset
+from lib.dataset.utils import transform_coord
 # ============= Models ======================
 from lib.models.mmTransformer import mmTrans
 from lib.utils.evaluation_utils import compute_forecasting_metrics, FormatData
@@ -23,7 +24,6 @@ from lib.utils.utilities import load_checkpoint, load_model_class, save_checkpoi
 import gc
 import warnings
 import math
-from lib.dataset.utils import transform_coord
 
 def parse_args():
 
@@ -56,7 +56,7 @@ class AutomaticWeightedLoss(torch.nn.Module):
     def forward(self, *x):
         loss_sum = 0
         for i, loss in enumerate(x):
-            loss_sum += (loss/(self.params[i] * self.params[i]) + torch.log(self.params[i]+1))
+            loss_sum += (loss / (self.params[i] ** 2) + torch.log(1 + self.params[i]))
             # +1避免了log 0的问题  log sigma部分对于整体loss的影响不大
         return loss_sum
 
@@ -85,14 +85,6 @@ def calculate_loss(min_fde_trj, gt_trj, C):
     loss_sum = awl(regression_loss, classification_loss)
     return loss_sum
 
-def transform_coord_tensor(coords, angle):
-    x = coords[..., 0]
-    y = coords[..., 1]
-    x_transform = torch.cos(angle)*x-torch.sin(angle)*y
-    y_transform = torch.cos(angle)*y+torch.sin(angle)*x
-    output_coords = torch.stack((x_transform, y_transform), axis=-1)
-
-    return output_coords
 
 def renormalized(out_trj, data):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -104,14 +96,14 @@ def renormalized(out_trj, data):
     pred_trj = torch.tensor([]).to(device)
     for i, name in enumerate(names):
         # Renormalized the predicted traj
-        pred = transform_coord_tensor(out_trj[i], -theta[i])
+        pred = transform_coord(out_trj[i], -theta[i])
         pred = pred + torch.tensor(togloble[i]).to(device)
         pred = pred.unsqueeze(0)
         pred_trj = torch.cat((pred_trj, pred), 0)
 
         gt = data['FUTURE'][i][0,:,:2].to(device)
         gt = gt.cumsum(axis=-2)
-        gt = transform_coord_tensor(gt, -theta[i])
+        gt = transform_coord(gt, -theta[i])
         gt = gt + torch.tensor(togloble[i]).to(device)
         gt = gt.unsqueeze(0)
         gt_trj = torch.cat((gt_trj, gt), 0)
@@ -131,6 +123,7 @@ def train(model, dataloader, optimizer, epoch):
                     data[key] = data[key].to(device)
 
         out = model(data)
+        # print('out', out.shape)
 
         out_score = out[1][:,0]
         out_trj = out[0][:,0]
@@ -140,9 +133,7 @@ def train(model, dataloader, optimizer, epoch):
         '''
         pred_trj, gt_trj = renormalized(out_trj, data)
         pred_trj = pred_trj.permute(1,0,2,3).to(device) #取target agent的未來軌跡，並轉成(6,batch num, 30, 2)
-
-        fde = torch.sqrt((pred_trj[:,:,-1,0] - gt_trj[:,-1,0]) ** 2 + 
-                    (pred_trj[:,:,-1,1] - gt_trj[:,-1,1]) ** 2)
+        fde = torch.linalg.norm(pred_trj[:,:,-1,:]-gt_trj[:,-1,:], axis=-1)
         fde = fde.permute(1,0) # (batch_num, 6) 
         D_s = torch.min(fde, dim=1)[0] # L2 of min_fde_endpoint and GT endpoint
         min_current_fde = torch.mean(D_s)
@@ -262,10 +253,9 @@ if __name__ == "__main__":
     print(model_cfg)
     model = mmTrans(stacked_transfomre, model_cfg)
 
-    print()
 
     awl = AutomaticWeightedLoss(2)
-    lr_rate = 10 ** -3 # origin is 0.001
+    lr_rate = 1e-4 # origin is 0.001
     optimizer = torch.optim.AdamW([
                 {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
                 {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0.0001}])
