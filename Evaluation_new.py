@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     # train by my self's model name
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    dir_path += "/ckpt_128_4worker"
+    dir_path += "/ckpt"
     all_file_name = os.listdir(dir_path)
     num = 0
     if(len(all_file_name)>0):
@@ -155,8 +155,8 @@ if __name__ == "__main__":
             if(num<int(tmp[1])):
                 num = int(tmp[1])
 
-        state_name =  dir_path + "/model_"+str(num)+".pt"
-    state = torch.load(state_name)
+        state_name =  dir_path + "/model_"+str(250)+".pt"
+    state = torch.load(state_name,map_location='cuda:0')
     model.load_state_dict(state['state_dict'])
     # awl_state = torch.load(state_name)
     # awl = AutomaticWeightedLoss(2)
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # ==================================== EVALUATION LOOP =====================================================
     model.eval()
     progress_bar = tqdm(val_dataloader)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     total_loss_score = 0
     with torch.no_grad():
         for j, data in enumerate(progress_bar):
