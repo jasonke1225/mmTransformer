@@ -58,9 +58,10 @@ class AutomaticWeightedLoss(torch.nn.Module):
         for i, loss in enumerate(x):
             loss_sum += (loss / (self.params[i] ** 2) + torch.log(1 + self.params[i]))
             # +1避免了log 0的问题  log sigma部分对于整体loss的影响不大
+            # print(i, loss, self.params[i])
         return loss_sum
 
-def calculate_loss(min_fde_trj, gt_trj, C):
+def calculate_loss(recover_trj, recover_gt_trj, min_fde_trj, gt_trj, C):
     '''
     vanilla training strategy: only using the proposal with the minimum final displacement error
     vanilla training strategy dont need confidence score
@@ -68,6 +69,7 @@ def calculate_loss(min_fde_trj, gt_trj, C):
     # regression loss
     crit = torch.nn.HuberLoss().to(device)
     regression_loss = crit(min_fde_trj, gt_trj)
+    recover_regression_loss = crit(recover_trj, recover_gt_trj)
 
     # confidence loss
     # T_y = 1
@@ -81,8 +83,8 @@ def calculate_loss(min_fde_trj, gt_trj, C):
     classification_loss = -1 * torch.log(P)
     classification_loss = classification_loss.mean() # batch size內要取平均
 
-    # loss_sum = awl(regression_loss, confidence_loss, classification_loss)
-    loss_sum = awl(regression_loss, classification_loss)
+    # loss_sum = awl(regression_loss, classification_loss)
+    loss_sum = awl(recover_regression_loss, regression_loss, classification_loss)
     return loss_sum
 
 
@@ -109,6 +111,29 @@ def renormalized(out_trj, data):
     
     return pred_trj, gt_trj
 
+def recover_renormalized(out_trj, data):
+    names = data['NAME'] # name is file name
+    togloble = data['NORM_CENTER']
+    theta = torch.Tensor(data['THETA'])
+    city_name = data['CITY_NAME']
+    gt_trj = torch.tensor([]).to(device)
+    pred_trj = torch.tensor([]).to(device)
+    for i, name in enumerate(names):
+        # Renormalized the predicted traj
+        pred = transform_coord(out_trj[i], -theta[i])
+        pred = pred + torch.tensor(togloble[i]).to(device)
+        pred = pred.unsqueeze(0)
+        pred_trj = torch.cat((pred_trj, pred), 0)
+
+        gt = data['HISTORY'][i][0,:,:2].to(device)
+        gt = gt.cumsum(axis=-2)
+        gt = transform_coord(gt, -theta[i])
+        gt = gt + torch.tensor(togloble[i]).to(device)
+        gt = gt.unsqueeze(0)
+        gt_trj = torch.cat((gt_trj, gt), 0)
+    
+    return pred_trj, gt_trj
+
 def train(model, dataloader, optimizer, epoch):
     model.train()
 
@@ -120,7 +145,6 @@ def train(model, dataloader, optimizer, epoch):
                 if(data[key].device != device):
                     data[key] = data[key].to(device)
         
-        # print(data)
         # for k in data:
         #     try:
         #         print(k, data[k].shape)
@@ -132,12 +156,21 @@ def train(model, dataloader, optimizer, epoch):
         out = model(data)
         # print('out', out.shape)
 
-        out_score = out[1][:,0]
+        out_score = out[2][:,0]
+        recover_trj = out[1][:,0]
         out_trj = out[0][:,0]
         '''
         renormalized
-        note: renormalized, fde算法有檢查過，是對的
+        note: renormalized, fde算法有檢查過,是對的
         '''
+
+        """
+        here to start revive
+        """
+        recover_pred_trj, recover_gt_trj = recover_renormalized(recover_trj, data)
+        recover_pred_trj = recover_pred_trj[:,0]
+        """"""
+
         pred_trj, gt_trj = renormalized(out_trj, data)
         pred_trj = pred_trj.permute(1,0,2,3) #取target agent的未來軌跡，並轉成(6,batch num, 30, 2)
         fde = torch.linalg.norm(pred_trj[:,:,-1,:]-gt_trj[:,-1,:], axis=-1)
@@ -159,7 +192,8 @@ def train(model, dataloader, optimizer, epoch):
             C = torch.cat((C, tmp_score),0)
 
         # weight losses
-        loss_sum = calculate_loss(min_fde_trj, gt_trj, C)
+        # print(recover_pred_trj.shape, recover_gt_trj.shape, min_fde_trj.shape, gt_trj.shape)
+        loss_sum = calculate_loss(recover_pred_trj, recover_gt_trj, min_fde_trj, gt_trj, C)
         optimizer.zero_grad(set_to_none=True)
         loss_sum.backward()
         total_loss_score += float(loss_sum.item())
@@ -190,11 +224,19 @@ def val(model, dataloader, optimizer, epoch):
 
             out = model(data)
 
-            out_score = out[1][:,0]
+            out_score = out[2][:,0]
+            recover_trj = out[1][:,0]
             out_trj = out[0][:,0]
             '''
             renormalized
             '''
+            """
+            here to start revive
+            """
+            recover_pred_trj, recover_gt_trj = recover_renormalized(recover_trj, data)
+            recover_pred_trj = recover_pred_trj[:,0]
+            """"""
+
             pred_trj, gt_trj = renormalized(out_trj, data)
 
             pred_trj = pred_trj.permute(1,0,2,3) #取target agent的未來軌跡，並轉成(6,batch num, 30, 2)
@@ -217,7 +259,7 @@ def val(model, dataloader, optimizer, epoch):
                 C = torch.cat((C, tmp_score),0)
 
             # weight losses
-            loss_sum = calculate_loss(min_fde_trj, gt_trj, C)
+            loss_sum = calculate_loss(recover_pred_trj, recover_gt_trj, min_fde_trj, gt_trj, C)
             total_loss_score += float(loss_sum.item())
 
         total_loss_score /= len(dataloader)
@@ -244,7 +286,10 @@ if __name__ == "__main__":
                                 shuffle=train_cfg["shuffle"],
                                 batch_size=train_cfg["batch_size"],
                                 num_workers=train_cfg["num_workers"],
-                                collate_fn=collate_single_cpu)
+                                collate_fn=collate_single_cpu,
+                                prefetch_factor=16,
+                                pin_memory=True,
+                                persistent_workers=True)
 
     validation_cfg = cfg.get('val_dataset')
     val_dataset = ArgoverseDataset(validation_cfg)
@@ -261,8 +306,8 @@ if __name__ == "__main__":
     model = mmTrans(stacked_transfomre, model_cfg)
 
 
-    awl = AutomaticWeightedLoss(2)
-    lr_rate = 1e-5 # origin is 0.001
+    awl = AutomaticWeightedLoss(3)
+    lr_rate = 1e-4 # origin is 0.001
     optimizer = torch.optim.AdamW([
                 {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
                 {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0.0001}])

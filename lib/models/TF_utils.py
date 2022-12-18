@@ -292,6 +292,17 @@ class GeneratorWithParallelHeads626(nn.Module):
             nn.ReLU(),
             nn.Linear(reg_h_dim*2, reg_h_dim, bias=True),
             nn.Linear(reg_h_dim, out_size, bias=True))
+        """
+        here to start revive
+        """
+        recover_out_size = 19*2
+        self.recover_mlp = nn.Sequential(
+            nn.Linear(d_model, reg_h_dim*2, bias=True),
+            nn.LayerNorm(reg_h_dim*2),
+            nn.ReLU(),
+            nn.Linear(reg_h_dim*2, reg_h_dim, bias=True),
+            nn.Linear(reg_h_dim, recover_out_size, bias=True))
+        """"""
         self.dis_emb = nn.Linear(2, dis_h_dim, bias=True)
         self.cls_FFN = PointerwiseFeedforward(
             d_model, 2*d_model, dropout=dropout)
@@ -304,10 +315,14 @@ class GeneratorWithParallelHeads626(nn.Module):
         pred = self.reg_mlp(x)
         pred = pred.view(*pred.shape[0:3], -1, 2).cumsum(dim=-2)
         # return pred
+        
+        recover_pred = self.recover_mlp(x)
+        recover_pred = recover_pred.view(*pred.shape[0:3], -1, 2).cumsum(dim=-2)
+
         cls_h = self.cls_FFN(x)
         cls_h = self.classification_layer(cls_h).squeeze(dim=-1)
         conf = self.cls_opt(cls_h)
-        return pred, conf
+        return pred, recover_pred, conf
 
 
 class GeneratorWithParallelHeads(nn.Module):

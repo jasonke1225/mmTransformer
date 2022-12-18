@@ -257,7 +257,10 @@ class FormatData:
         city_name = data['CITY_NAME']
 
         # format predictions
-        pred_trajs, pred_confs = predictions
+        try:
+            pred_trajs, pred_confs = predictions
+        except:
+            pred_trajs, outputs_recover, pred_confs = predictions
         pred_trajs = pred_trajs[:, 0].detach().cpu().numpy()
         pred_confs = pred_confs[:, 0].detach().cpu().numpy()
 

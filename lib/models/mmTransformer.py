@@ -119,6 +119,29 @@ class mmTrans(nn.Module):
 
         return lane_feature, lane_mask
 
+    """
+    here to start revive
+    """
+    def traj_mask(self, trajs):
+        trajs_len = trajs.shape[2]
+        self.num_traj_mask = 5
+        weight = torch.ones((self.B, trajs_len))
+
+        traj_mask_idx = torch.multinomial(weight, num_samples=self.num_traj_mask, replacement=False).unsqueeze(-1).repeat(1,1,1,4).view(-1).long().to(trajs.device)
+
+        repeat_B = torch.arange(0, self.B).unsqueeze(1).repeat(1,self.num_traj_mask*4).view(-1).long().to(trajs.device)
+        repeat_0 = torch.zeros(traj_mask_idx.shape[0], dtype=torch.long).to(trajs.device)
+        traj_1234 = torch.arange(0, 4).unsqueeze(0).repeat(1,self.B*self.num_traj_mask).view(-1).long().to(trajs.device)
+
+        # print(traj_mask_idx.shape, repeat_0.shape, repeat_B.shape, traj_1234.shape)
+
+        # print(traj_mask.shape, traj_mask)
+        return [repeat_B, repeat_0, traj_mask_idx, traj_1234]
+
+    """
+    completed
+    """
+
     def forward(self, data: dict):
         """
         Args:
@@ -146,7 +169,14 @@ class mmTrans(nn.Module):
         social_mask = self.preprocess_traj(data['HISTORY'])
         lane_enc, lane_mask = self.preprocess_lane(data['LANE'])
 
-        out = self.stacked_transformer(trajs, pos, self.max_agent_num,
+        mask_idx = self.traj_mask(trajs=trajs)
+        masked_trajs = trajs.clone().detach().to(trajs.device)
+        masked_trajs[mask_idx] = 0
+        # print(trajs[0,0])
+        # print(masked_trajs.shape, masked_trajs[0,0])
+
+
+        out = self.stacked_transformer(masked_trajs, pos, self.max_agent_num,
                                        social_mask, lane_enc, lane_mask)
 
         return out

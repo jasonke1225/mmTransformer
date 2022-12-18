@@ -155,8 +155,8 @@ if __name__ == "__main__":
             if(num<int(tmp[1])):
                 num = int(tmp[1])
 
-        state_name =  dir_path + "/model_"+str(250)+".pt"
-    state = torch.load(state_name,map_location='cuda:0')
+        state_name =  dir_path + "/model_"+str(num)+".pt"
+    state = torch.load(state_name) #,map_location='cuda:0'
     model.load_state_dict(state['state_dict'])
     # awl_state = torch.load(state_name)
     # awl = AutomaticWeightedLoss(2)

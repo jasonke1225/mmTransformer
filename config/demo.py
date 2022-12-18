@@ -65,9 +65,9 @@ from copy import deepcopy
 train_dataset= deepcopy(dataset)
 train_dataset.update(dict(
         type= "STFDataset",
-        batch_size= 128,
+        batch_size= 1,
         shuffle= True,
-        num_workers= 8,
+        num_workers= 16,
         Providing_GT= True,
         lane_length= 10,
         dataset_path= './data/train',

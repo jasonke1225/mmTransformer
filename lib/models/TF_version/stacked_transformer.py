@@ -152,7 +152,7 @@ class STF(nn.Module):
         out = torch.cat([social_out, lane_out], -1)           # ex: (32,28,6,256)
 
         # Prediction head
-        outputs_coord, outputs_class = self.prediction_header(out) # ex:(32,28,6,30,2), (32,28,6)
+        outputs_coord, outputs_recover_coord, outputs_class = self.prediction_header(out) # ex:(32,28,6,30,2), (32,28,6)
   
-        return outputs_coord, outputs_class
+        return outputs_coord, outputs_recover_coord, outputs_class
  
