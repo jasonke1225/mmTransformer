@@ -262,7 +262,7 @@ if __name__ == "__main__":
 
 
     awl = AutomaticWeightedLoss(2)
-    lr_rate = 1e-5 # origin is 0.001
+    lr_rate = 1e-4 # origin is 0.001
     optimizer = torch.optim.AdamW([
                 {'params':model.parameters(), 'lr':lr_rate, 'weight_decay':0.0001},
                 {'params':awl.parameters(), 'lr':lr_rate, 'weight_decay':0.0001}])

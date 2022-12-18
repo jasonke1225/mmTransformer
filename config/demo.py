@@ -67,7 +67,7 @@ train_dataset.update(dict(
         type= "STFDataset",
         batch_size= 128,
         shuffle= True,
-        num_workers= 8,
+        num_workers= 16,
         Providing_GT= True,
         lane_length= 10,
         dataset_path= './data/train',
