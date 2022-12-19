@@ -121,7 +121,7 @@ if __name__ == "__main__":
     cfg = Config.fromfile(args.config)
 
     # ================================== INIT DATASET ==========================================================
-    validation_cfg = cfg.get('train_dataset')
+    validation_cfg = cfg.get('val_dataset')
     # print("validation_cfg: ", validation_cfg)
     val_dataset = ArgoverseDataset(validation_cfg)
     val_dataloader = DataLoader(val_dataset,
