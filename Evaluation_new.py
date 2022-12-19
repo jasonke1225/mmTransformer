@@ -121,7 +121,7 @@ if __name__ == "__main__":
     cfg = Config.fromfile(args.config)
 
     # ================================== INIT DATASET ==========================================================
-    validation_cfg = cfg.get('train_dataset')
+    validation_cfg = cfg.get('val_dataset')
     # print("validation_cfg: ", validation_cfg)
     val_dataset = ArgoverseDataset(validation_cfg)
     val_dataloader = DataLoader(val_dataset,
@@ -155,7 +155,7 @@ if __name__ == "__main__":
             if(num<int(tmp[1])):
                 num = int(tmp[1])
 
-        state_name =  dir_path + "/model_"+str(250)+".pt"
+        state_name =  dir_path + "/model_"+str(100)+".pt"
     state = torch.load(state_name,map_location='cuda:0')
     model.load_state_dict(state['state_dict'])
     # awl_state = torch.load(state_name)
